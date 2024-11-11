@@ -231,8 +231,7 @@ private:
 	  return IOWrap::readImageBW_8U(files[id]);
 	}
 
-
-	ImageAndExposure* getImage_internal(int id, int unused)
+	ImageAndExposure *getImage_internal(int id, int unused)
 	{
 		MinimalImageB* minimg = getImageRaw_internal(id, 0);
 		ImageAndExposure* ret2 = undistort->undistort<unsigned char>(
