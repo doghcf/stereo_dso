@@ -574,7 +574,8 @@ int main(int argc, char **argv)
 				<< ((tv_end.tv_sec - tv_start.tv_sec) * 1000.0f + (tv_end.tv_usec - tv_start.tv_usec) / 1000.0f) / (float)reader->getNumImages() << "\n";
 			tmlog.flush();
 			tmlog.close();
-		} });
+		} 
+	});
 
 	if (viewer != 0)
 		viewer->run();
