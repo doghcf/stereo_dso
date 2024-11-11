@@ -3,7 +3,8 @@ SET(PROJECT_NAME SDSO)
 PROJECT(${PROJECT_NAME})
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 #set(CMAKE_VERBOSE_MAKEFILE ON)
-
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 #set(BUILD_TYPE Release)
 set(BUILD_TYPE RelWithDebInfo)
@@ -11,6 +12,7 @@ set(BUILD_TYPE RelWithDebInfo)
 set(EXECUTABLE_OUTPUT_PATH bin)
 set(LIBRARY_OUTPUT_PATH lib)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+set(Eigen3_ROOT "/usr/include/eigen3")
 
 # required libraries
 find_package(SuiteParse REQUIRED)
@@ -117,6 +119,8 @@ if (OpenCV_FOUND AND Pangolin_FOUND)
 	message("--- compiling dso_dataset.")
 	add_executable(dso_dataset ${PROJECT_SOURCE_DIR}/src/main_dso_pangolin.cpp )
     target_link_libraries(dso_dataset dso boost_system boost_thread cxsparse ${LIBZIP_LIBRARY} ${Pangolin_LIBRARIES} ${OpenCV_LIBS})
+	TARGET_LINK_LIBRARIES(dso_dataset libpangolin.so libGL.so.1 libGLEW.so)
+
 else()
 	message("--- not building dso_dataset, since either don't have openCV or Pangolin.")
 endif()

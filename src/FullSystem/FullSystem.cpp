@@ -55,7 +55,7 @@
 #include "util/ImageAndExposure.h"
 
 #include <cmath>
-#include <cv.h>
+#include <opencv/cv.h>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
@@ -302,7 +302,7 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh, FrameHessian* fh_right)
 	assert(allFrameHistory.size() > 0);
 	// set pose initialization.
 
-//    printf("the size of allFrameHistory is %d \n", (int)allFrameHistory.size());
+	// printf("the size of allFrameHistory is %d \n", (int)allFrameHistory.size());
 
     // show original images
     for(IOWrap::Output3DWrapper* ow : outputWrapper)

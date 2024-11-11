@@ -174,7 +174,7 @@ void PangolinDSOViewer::run()
 	pangolin::Var<double> settings_mapFps("ui.KF fps",0,0,0,false);
 
     // show ground truth
-    std::string gtPath = "/home/jiatianwu/dso/05/05.txt";
+    std::string gtPath = "/home/bjergsen/stereo_dso/gt05.txt";
     std::ifstream ReadFile(gtPath.c_str());
     std::string temp;
     std::string delim (" ");

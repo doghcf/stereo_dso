@@ -121,10 +121,6 @@ struct FrameHessian
 	float* absSquaredGrad[PYR_LEVELS];  // only used for pixel select (histograms etc.). no NAN.
 
 
-
-
-
-
 	int frameID;						// incremental ID for keyframes only!
 	static int instanceCounter;
 	int idx;

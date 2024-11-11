@@ -185,7 +185,8 @@ private:
 
 				assert(callPerIndex != 0);
 
-				Running s; memset(&s, 0, sizeof(Running));
+				Running s; 
+				memset(&s, 0, sizeof(Running));
 				callPerIndex(todo, std::min(todo+stepSize, maxIndex), &s, idx);
 				gotOne[idx] = true;
 				lock.lock();
