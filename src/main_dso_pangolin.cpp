@@ -53,6 +53,8 @@ std::string vignette = "";
 std::string gammaCalib = "";
 std::string source = "";
 std::string calib = "";
+std::string source1 = "";
+std::string calib1 = "";
 double rescale = 1;
 bool reverse = false;
 bool disableROS = false;
@@ -111,7 +113,7 @@ void settingsDefault(int preset)
 		setting_maxOptIterations = 6;
 		setting_minOptIterations = 1;
 
-		setting_kfGlobalWeight = 0.3;					// original is 1.0. 0.3 is a balance between speed and accuracy. if tracking lost, set this para higher
+		setting_kfGlobalWeight = 1.0;					// original is 1.0. 0.3 is a balance between speed and accuracy. if tracking lost, set this para higher
 		setting_maxShiftWeightT = 0.04f * (640 + 128);	// original is 0.04f * (640+480); this para is depend on the crop size.
 		setting_maxShiftWeightR = 0.04f * (640 + 128);	// original is 0.0f * (640+480);
 		setting_maxShiftWeightRT = 0.02f * (640 + 128); // original is 0.02f * (640+480);
@@ -265,10 +267,24 @@ void parseArgument(char *arg)
 		return;
 	}
 
+	if (1 == sscanf(arg, "files1=%s", buf))
+	{
+		source1 = buf;
+		printf("loading right data from %s!\n", source1.c_str());
+		return;
+	}
+
 	if (1 == sscanf(arg, "calib=%s", buf))
 	{
 		calib = buf;
 		printf("loading calibration from %s!\n", calib.c_str());
+		return;
+	}
+
+	if (1 == sscanf(arg, "calib1=%s", buf))
+	{
+		calib1 = buf;
+		printf("loading calibration from %s!\n", calib1.c_str());
 		return;
 	}
 
@@ -356,8 +372,8 @@ int main(int argc, char **argv)
 	// hook crtl+C.
 	boost::thread exThread = boost::thread(exitThread);
 
-	ImageFolderReader *reader = new ImageFolderReader(source + "/image_0", calib, gammaCalib, vignette);
-	ImageFolderReader *reader_right = new ImageFolderReader(source + "/image_1", calib, gammaCalib, vignette);
+	ImageFolderReader *reader = new ImageFolderReader(source, calib, gammaCalib, vignette);
+	ImageFolderReader *reader_right = new ImageFolderReader(source1, calib1, gammaCalib, vignette);
 	reader->setGlobalCalibration();
 	reader_right->setGlobalCalibration();
 
