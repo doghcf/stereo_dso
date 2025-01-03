@@ -249,40 +249,20 @@ namespace dso
 		std::ofstream myfile;
 		myfile.open(file.c_str());
 		myfile << std::setprecision(15);
-		int i = 0;
-
-		Eigen::Matrix<double, 3, 3> last_R = (*(allFrameHistory.begin()))->camToWorld.so3().matrix();
-		Eigen::Matrix<double, 3, 1> last_T = (*(allFrameHistory.begin()))->camToWorld.translation().transpose();
 
 		for (FrameShell *s : allFrameHistory)
 		{
 			if (!s->poseValid)
 			{
-				myfile << last_R(0, 0) << " " << last_R(0, 1) << " " << last_R(0, 2) << " " << last_T(0, 0) << " " << last_R(1, 0) << " " << last_R(1, 1) << " " << last_R(1, 2) << " " << last_T(1, 0) << " " << last_R(2, 0) << " " << last_R(2, 1) << " " << last_R(2, 2) << " " << last_T(2, 0) << "\n";
 				continue;
 			}
 
 			if (setting_onlyLogKFPoses && s->marginalizedAt == s->id)
 			{
-				myfile << last_R(0, 0) << " " << last_R(0, 1) << " " << last_R(0, 2) << " " << last_T(0, 0) << " " << last_R(1, 0) << " " << last_R(1, 1) << " " << last_R(1, 2) << " " << last_T(1, 0) << " " << last_R(2, 0) << " " << last_R(2, 1) << " " << last_R(2, 2) << " " << last_T(2, 0) << "\n";
 				continue;
 			}
 
-			const Eigen::Matrix<double, 3, 3> R = s->camToWorld.so3().matrix();
-			const Eigen::Matrix<double, 3, 1> T = s->camToWorld.translation().transpose();
-
-			last_R = R;
-			last_T = T;
-
-			myfile << R(0, 0) << " " << R(0, 1) << " " << R(0, 2) << " " << T(0, 0) << " " << R(1, 0) << " " << R(1, 1) << " " << R(1, 2) << " " << T(1, 0) << " " << R(2, 0) << " " << R(2, 1) << " " << R(2, 2) << " " << T(2, 0) << "\n";
-
-			//		myfile << s->timestamp <<
-			//			" " << s->camToWorld.translation().transpose()<<
-			//			" " << s->camToWorld.so3().unit_quaternion().x()<<
-			//			" " << s->camToWorld.so3().unit_quaternion().y()<<
-			//			" " << s->camToWorld.so3().unit_quaternion().z()<<
-			//			" " << s->camToWorld.so3().unit_quaternion().w() << "\n";
-			i++;
+			myfile << s->timestamp << " " << s->camToWorld.translation().transpose() << " " << s->camToWorld.so3().unit_quaternion().x() << " " << s->camToWorld.so3().unit_quaternion().y() << " " << s->camToWorld.so3().unit_quaternion().z() << " " << s->camToWorld.so3().unit_quaternion().w() << "\n";
 		}
 		myfile.close();
 	}
@@ -1052,6 +1032,11 @@ namespace dso
 
 	void FullSystem::addActiveFrame(ImageAndExposure *image, ImageAndExposure *image_right, int id)
 	{
+		LOG(INFO) << "id: " << id;
+		LOG(INFO) << "M_num: " << M_num << " M_num2: " << M_num2;
+		run_time = pic_time_stamp[id];
+		LOG(INFO) << std::fixed << std::setprecision(12) << "run_time: " << run_time;
+
 		if (isLost)
 			return;
 		boost::unique_lock<boost::mutex> lock(trackMutex);
@@ -1082,6 +1067,8 @@ namespace dso
 			{
 				coarseInitializer->setFirstStereo(&Hcalib, fh, fh_right);
 				initialized = true;
+				M_num = 0;
+				M_num2 = 0;
 			}
 			return;
 		}
