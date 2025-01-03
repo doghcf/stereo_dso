@@ -63,7 +63,7 @@ namespace dso
 		wM.diagonal()[6] = SCALE_A;
 		wM.diagonal()[7] = SCALE_B;
 	}
-	
+
 	CoarseInitializer::~CoarseInitializer()
 	{
 		for (int lvl = 0; lvl < pyrLevelsUsed; lvl++)
@@ -1103,10 +1103,7 @@ namespace dso
 	{
 		const float NNDistFactor = 0.05;
 
-		typedef nanoflann::KDTreeSingleIndexAdaptor<
-			nanoflann::L2_Simple_Adaptor<float, FLANNPointcloud>,
-			FLANNPointcloud, 2>
-			KDTree;
+		typedef nanoflann::KDTreeSingleIndexAdaptor<nanoflann::L2_Simple_Adaptor<float, FLANNPointcloud>, FLANNPointcloud, 2> KDTree;
 
 		// build indices
 		FLANNPointcloud pcs[PYR_LEVELS];

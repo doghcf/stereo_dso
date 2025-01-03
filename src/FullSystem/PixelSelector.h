@@ -49,7 +49,7 @@ namespace dso
 
 				float bestXX = 0, bestYY = 0, bestXY = 0, bestYX = 0;
 
-				Eigen::Vector3f *grads0 = grads + x + y * w;
+				Eigen::Vector3f *grads0 = grads + x + y * w;	// 该像素点的梯度指针
 				for (int dx = 0; dx < pot; dx++)
 					for (int dy = 0; dy < pot; dy++)
 					{
@@ -60,14 +60,14 @@ namespace dso
 
 						if (sqgd > TH * TH)
 						{
-							float agx = fabs((float)g[1]);
+							float agx = fabs((float)g[1]);	// x方向梯度
 							if (agx > bestXX)
 							{
 								bestXX = agx;
 								bestXXID = idx;
 							}
 
-							float agy = fabs((float)g[2]);
+							float agy = fabs((float)g[2]);	// y方向梯度
 							if (agy > bestYY)
 							{
 								bestYY = agy;
