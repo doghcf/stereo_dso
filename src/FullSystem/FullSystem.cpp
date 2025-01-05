@@ -262,7 +262,7 @@ namespace dso
 				continue;
 			}
 
-			myfile << s->timestamp << " " << s->camToWorld.translation().transpose() << " " << s->camToWorld.so3().unit_quaternion().x() << " " << s->camToWorld.so3().unit_quaternion().y() << " " << s->camToWorld.so3().unit_quaternion().z() << " " << s->camToWorld.so3().unit_quaternion().w() << "\n";
+			myfile << s->timestamp / 1e9 << " " << s->camToWorld.translation().transpose() << " " << s->camToWorld.so3().unit_quaternion().x() << " " << s->camToWorld.so3().unit_quaternion().y() << " " << s->camToWorld.so3().unit_quaternion().z() << " " << s->camToWorld.so3().unit_quaternion().w() << "\n";
 		}
 		myfile.close();
 	}
@@ -1032,11 +1032,6 @@ namespace dso
 
 	void FullSystem::addActiveFrame(ImageAndExposure *image, ImageAndExposure *image_right, int id)
 	{
-		LOG(INFO) << "id: " << id;
-		LOG(INFO) << "M_num: " << M_num << " M_num2: " << M_num2;
-		run_time = pic_time_stamp[id];
-		LOG(INFO) << std::fixed << std::setprecision(12) << "run_time: " << run_time;
-
 		if (isLost)
 			return;
 		boost::unique_lock<boost::mutex> lock(trackMutex);

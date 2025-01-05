@@ -55,6 +55,7 @@ std::string source = "";
 std::string calib = "";
 std::string source1 = "";
 std::string calib1 = "";
+std::string result = "";
 double rescale = 1;
 bool reverse = false;
 bool disableROS = false;
@@ -288,6 +289,13 @@ void parseArgument(char *arg)
 		return;
 	}
 
+	if (1 == sscanf(arg, "result=%s", buf))
+	{
+		result = buf;
+		printf("saving result to %s!\n", result.c_str());
+		return;
+	}
+
 	if (1 == sscanf(arg, "vignette=%s", buf))
 	{
 		vignette = buf;
@@ -461,7 +469,7 @@ int main(int argc, char **argv)
 		clock_t started = clock();
 		double sInitializerOffset = 0;
 
-		for (int ii = 0; ii < (int)idsToPlay.size(); ii++)
+		for (int ii = 0; ii < (int)idsToPlay.size() - 1; ii++)
 		{
 			if (!fullSystem->initialized) // if not initialized: reset start time.
 			{
@@ -563,7 +571,7 @@ int main(int argc, char **argv)
 		struct timeval tv_end;
 		gettimeofday(&tv_end, NULL);
 
-		fullSystem->printResult("/home/bjergsen/stereo_dso/result.txt");
+		fullSystem->printResult(result);
 
 		int numFramesProcessed = abs(idsToPlay[0] - idsToPlay.back());
 		double numSecondsProcessed = fabs(reader->getTimestamp(idsToPlay[0]) - reader->getTimestamp(idsToPlay.back()));
