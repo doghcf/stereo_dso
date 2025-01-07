@@ -231,10 +231,11 @@ namespace dso
 
 		void makeImages(float *color, CalibHessian *HCalib);
 
+		//* 获得先验信息矩阵
 		inline Vec10 getPrior()
 		{
 			Vec10 p = Vec10::Zero();
-			if (frameID == 0)
+			if (frameID == 0)	//* 第一帧就用初始值做先验
 			{
 				p.head<3>() = Vec3::Constant(setting_initialTransPrior);
 				p.segment<3>(3) = Vec3::Constant(setting_initialRotPrior);

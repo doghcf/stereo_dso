@@ -95,11 +95,11 @@ public:
 
 	void setAdjointsF(CalibHessian* Hcalib);
 
-	std::vector<EFFrame*> frames;
-	int nPoints, nFrames, nResiduals;
+	std::vector<EFFrame*> frames;		//!< 能量函数中的帧
+	int nPoints, nFrames, nResiduals;	//!< EFPoint的数目, EFframe关键帧数, 残差数
 
-	MatXX HM;
-	VecX bM;
+	MatXX HM;	//!< 优化的Hessian矩阵, 边缘化掉逆深度
+	VecX bM;	//!< 优化的Jr项, 边缘化掉逆深度
 
 	int resInA, resInL, resInM;
 	MatXX lastHS;
@@ -132,10 +132,10 @@ private:
 	void orthogonalize(VecX* b, MatXX* H);
 	Mat18f* adHTdeltaF;
 
-	Mat88* adHost;
+	Mat88* adHost;				//!< 伴随矩阵, double
 	Mat88* adTarget;
 
-	Mat88f* adHostF;
+	Mat88f* adHostF;			//!< 伴随矩阵, float
 	Mat88f* adTargetF;
 
 

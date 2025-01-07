@@ -1386,7 +1386,7 @@ namespace dso
 		//    printEigenValLine();
 	}
 
-	// insert the first Frame into FrameHessians
+	//@ 从初始化中提取出信息, 用于跟踪.
 	void FullSystem::initializeFromInitializer(FrameHessian *newFrame)
 	{
 		boost::unique_lock<boost::mutex> lock(mapMutex);
@@ -1397,12 +1397,13 @@ namespace dso
 		K(0, 2) = Hcalib.cxl();
 		K(1, 2) = Hcalib.cyl();
 
-		// add firstframe.
-		FrameHessian *firstFrame = coarseInitializer->firstFrame;
-		firstFrame->idx = frameHessians.size();
-		frameHessians.push_back(firstFrame);
-		firstFrame->frameID = allKeyFramesHistory.size();
-		allKeyFramesHistory.push_back(firstFrame->shell);
+		// [ ***step 1*** ] 把第一帧设置成关键帧, 加入队列, 加入EnergyFunctional
+		FrameHessian *firstFrame = coarseInitializer->firstFrame;	// 获取初始化器中的第一帧
+		firstFrame->idx = frameHessians.size();						// 赋值给它id (0开始)
+		frameHessians.push_back(firstFrame);						// 地图内关键帧容器
+		firstFrame->frameID = allKeyFramesHistory.size();			// 所有历史关键帧id
+		allKeyFramesHistory.push_back(firstFrame->shell);			// 所有历史关键帧容器
+		// 第一帧加入优化
 		ef->insertFrame(firstFrame, &Hcalib);
 		setPrecalcValues();
 
