@@ -186,21 +186,24 @@ namespace dso
 		}
 	}
 
+	//@ 计算优化前和优化后的相对位姿, 相对光度变化, 及中间变量
 	void FrameFramePrecalc::set(FrameHessian *host, FrameHessian *target, CalibHessian *HCalib)
 	{
-		// printf("whether this->host is NULL: yes is 1, no is 0. Answer: %x\n", this);
 		this->host = host;
 		this->target = target;
 
+		// 优化前host与target间位姿变换
 		SE3 leftToLeft_0 = target->get_worldToCam_evalPT() * host->get_worldToCam_evalPT().inverse();
-		PRE_RTll_0 = (leftToLeft_0.rotationMatrix()).cast<float>();
-		PRE_tTll_0 = (leftToLeft_0.translation()).cast<float>();
+		PRE_RTll_0 = (leftToLeft_0.rotationMatrix()).cast<float>();	// 旋转矩阵
+		PRE_tTll_0 = (leftToLeft_0.translation()).cast<float>();	// 平移向量
 
+		// 优化后host与target间位姿变换
 		SE3 leftToLeft = target->PRE_worldToCam * host->PRE_camToWorld;
-		PRE_RTll = (leftToLeft.rotationMatrix()).cast<float>();
-		PRE_tTll = (leftToLeft.translation()).cast<float>();
-		distanceLL = leftToLeft.translation().norm();
+		PRE_RTll = (leftToLeft.rotationMatrix()).cast<float>();	// 旋转矩阵
+		PRE_tTll = (leftToLeft.translation()).cast<float>();	// 平移向量
+		distanceLL = leftToLeft.translation().norm();			// 两帧间距离
 
+		// 乘上内参, 中间量?
 		Mat33f K = Mat33f::Zero();
 		K(0, 0) = HCalib->fxl();
 		K(1, 1) = HCalib->fyl();
@@ -211,6 +214,7 @@ namespace dso
 		PRE_RKiTll = PRE_RTll * K.inverse();
 		PRE_KtTll = K * PRE_tTll;
 
+		// 光度仿射值
 		PRE_aff_mode = AffLight::fromToVecExposure(host->ab_exposure, target->ab_exposure, host->aff_g2l(), target->aff_g2l()).cast<float>();
 		PRE_b0_mode = host->aff_g2l_0().b;
 	}

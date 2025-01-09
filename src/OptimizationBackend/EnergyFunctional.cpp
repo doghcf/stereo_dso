@@ -157,7 +157,8 @@ namespace dso
 		delete accSSE_top_A;
 		delete accSSE_bot;
 	}
-
+	
+	//@ 计算各种状态的相对量的增量
 	void EnergyFunctional::setDeltaF(CalibHessian *HCalib)
 	{
 		if (adHTdeltaF != 0)
@@ -167,17 +168,19 @@ namespace dso
 			for (int t = 0; t < nFrames; t++)
 			{
 				int idx = h + t * nFrames;
+				//! delta_th = Adj * delta_t or delta_th = Adj * delta_h
+				// 加一起应该是, 两帧之间位姿变换的增量, 因为h变一点, t变一点
 				adHTdeltaF[idx] = frames[h]->data->get_state_minus_stateZero().head<8>().cast<float>().transpose() * adHostF[idx] + frames[t]->data->get_state_minus_stateZero().head<8>().cast<float>().transpose() * adTargetF[idx];
 			}
 
-		cDeltaF = HCalib->value_minus_value_zero.cast<float>();
+		cDeltaF = HCalib->value_minus_value_zero.cast<float>();	// 相机内参增量
 		for (EFFrame *f : frames)
 		{
 			f->delta = f->data->get_state_minus_stateZero().head<8>();
 			f->delta_prior = (f->data->get_state() - f->data->getPriorZero()).head<8>();
 
 			for (EFPoint *p : f->points)
-				p->deltaF = p->data->idepth - p->data->idepth_zero;
+				p->deltaF = p->data->idepth - p->data->idepth_zero;	// 逆深度的增量
 		}
 
 		EFDeltaValid = true;

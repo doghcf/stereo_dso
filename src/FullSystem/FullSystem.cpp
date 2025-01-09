@@ -1410,10 +1410,12 @@ namespace dso
 		FrameHessian *firstFrameRight = coarseInitializer->firstRightFrame;
 		frameHessiansRight.push_back(firstFrameRight);
 
+		// 初始化第一帧的点
 		firstFrame->pointHessians.reserve(wG[0] * hG[0] * 0.2f);
 		firstFrame->pointHessiansMarginalized.reserve(wG[0] * hG[0] * 0.2f);
 		firstFrame->pointHessiansOut.reserve(wG[0] * hG[0] * 0.2f);
 
+		//[ ***step 2*** ] 求出平均尺度因子
 		float idepthStereo = 0;
 		float sumID = 1e-5, numID = 1e-5;
 		for (int i = 0; i < coarseInitializer->numPoints[0]; i++)
@@ -1526,9 +1528,9 @@ namespace dso
 	{
 		for (FrameHessian *fh : frameHessians)
 		{
-			fh->targetPrecalc.resize(frameHessians.size());
+			fh->targetPrecalc.resize(frameHessians.size());					// 每个目标帧预运算容器, 大小是关键帧数
 			for (unsigned int i = 0; i < frameHessians.size(); i++)
-				fh->targetPrecalc[i].set(fh, frameHessians[i], &Hcalib);
+				fh->targetPrecalc[i].set(fh, frameHessians[i], &Hcalib);	// 计算Host与target之间的变换关系
 		}
 
 		ef->setDeltaF(&Hcalib);

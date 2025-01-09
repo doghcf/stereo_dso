@@ -146,7 +146,7 @@ namespace dso
 		// precalc values
 		SE3 PRE_worldToCam;
 		SE3 PRE_camToWorld;
-		std::vector<FrameFramePrecalc, Eigen::aligned_allocator<FrameFramePrecalc>> targetPrecalc;
+		std::vector<FrameFramePrecalc, Eigen::aligned_allocator<FrameFramePrecalc>> targetPrecalc;	//!< 对于其它帧的预运算值
 		MinimalImageB3 *debugImage;
 
 		inline Vec6 w2c_leftEps() const { return get_state_scaled().head<6>(); }
@@ -272,16 +272,16 @@ namespace dso
 	{
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 		static int instanceCounter;
-
-		VecC value_zero;
-		VecC value_scaled;
-		VecCf value_scaledf;
-		VecCf value_scaledi;
-		VecC value;
-		VecC step;
-		VecC step_backup;
-		VecC value_backup;
-		VecC value_minus_value_zero;
+		// * 4×1的向量
+		VecC value_zero;				//!< FEJ固定点
+		VecC value_scaled;				//!< 乘以scale的内参
+		VecCf value_scaledf;			//!< float型的内参
+		VecCf value_scaledi;			//!< 逆, 应该是求导用为, 1/fx, 1/fy, -cx/fx, -cy/fy
+		VecC value;						//!< 没乘scale的内参
+		VecC step;						//!< 迭代中的增量
+		VecC step_backup;				//!< 上一次增量备份
+		VecC value_backup;				//!< 上一次值的备份
+		VecC value_minus_value_zero;	//!< 减去线性化点
 
 		inline ~CalibHessian() { instanceCounter--; }
 		inline CalibHessian()

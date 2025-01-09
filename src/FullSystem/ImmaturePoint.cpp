@@ -58,6 +58,7 @@ namespace dso
 		quality = 10000;
 	}
 
+	//! 这里u_ v_ 是加了0.5的
 	ImmaturePoint::ImmaturePoint(float u_, float v_, FrameHessian *host_, CalibHessian *HCalib)
 		: u(u_), v(v_), host(host_), idepth_min(0), idepth_max(NAN), lastTraceStatus(IPS_UNINITIALIZED)
 	{
@@ -68,6 +69,7 @@ namespace dso
 			int dx = patternP[idx][0];
 			int dy = patternP[idx][1];
 
+			// 由于+0.5导致积分, 插值得到3个值[像素值, x方向梯度, y方向梯度]
 			Vec3f ptc = getInterpolatedElement33BiLin(host->dI, u + dx, v + dy, wG[0]);
 
 			color[idx] = ptc[0];
@@ -77,8 +79,9 @@ namespace dso
 				return;
 			}
 
+			// 梯度矩阵[dx*2, dxdy; dydx, dy^2]
 			gradH += ptc.tail<2>() * ptc.tail<2>().transpose();
-
+			//! 点的权重 c^2 / ( c^2 + ||grad||^2 )
 			weights[idx] = sqrtf(setting_outlierTHSumComponent / (setting_outlierTHSumComponent + ptc.tail<2>().squaredNorm()));
 		}
 
@@ -97,7 +100,7 @@ namespace dso
 	{
 		// KRKi
 		Mat33f KRKi = Mat33f::Identity().cast<float>();
-		// Kt
+		// Kt 基线向量在像素坐标系中的投影
 		Vec3f Kt;
 		// T between stereo cameras
 		Vec3f bl;
@@ -116,16 +119,17 @@ namespace dso
 
 		Kt = K * bl;
 
-		// baseline * fx
+		// baseline * fx: 用于将像素坐标转换为实际的深度信息
 		float bf = -K(0, 0) * bl[0];
 
-		Vec3f pr = KRKi * Vec3f(u_stereo, v_stereo, 1);
-		Vec3f ptpMin = pr + Kt * idepth_min_stereo;
+		//[ ***step 1*** ] 计算出来搜索的上下限, 对应idepth_max, idepth_min
+		Vec3f pr = KRKi * Vec3f(u_stereo, v_stereo, 1);	// 初始投影点
+		Vec3f ptpMin = pr + Kt * idepth_min_stereo;		// 最小深度点
 
-		float uMin = ptpMin[0] / ptpMin[2];
-		float vMin = ptpMin[1] / ptpMin[2];
+		float uMin = ptpMin[0] / ptpMin[2];				// 最小深度点的像素坐标
+		float vMin = ptpMin[1] / ptpMin[2];				
 
-		if (!(uMin > 4 && vMin > 4 && uMin < wG[0] - 5 && vMin < hG[0] - 5))
+		if (!(uMin > 4 && vMin > 4 && uMin < wG[0] - 5 && vMin < hG[0] - 5))	// 超出边界
 		{
 			lastTraceUV = Vec2f(-1, -1);
 			lastTracePixelInterval = 0;
@@ -140,8 +144,8 @@ namespace dso
 
 		if (std::isfinite(idepth_max_stereo))
 		{
-			ptpMax = pr + Kt * idepth_max_stereo;
-			uMax = ptpMax[0] / ptpMax[2];
+			ptpMax = pr + Kt * idepth_max_stereo;	// 最大深度点
+			uMax = ptpMax[0] / ptpMax[2];			// 最大深度点的像素坐标
 			vMax = ptpMax[1] / ptpMax[2];
 
 			if (!(uMax > 4 && vMax > 4 && uMax < wG[0] - 5 && vMax < hG[0] - 5))
@@ -192,8 +196,8 @@ namespace dso
 			assert(dist > 0);
 		}
 
-		//		 set OOB if scale change too big.
-		if (!(idepth_min < 0 || (ptpMin[2] > 0.75 && ptpMin[2] < 1.5)))
+		// set OOB if scale change too big.
+		if (!(idepth_min < 0 || (ptpMin[2] > 0.75 && ptpMin[2] < 1.5)))	// 估计点深度值介于0.75至1.5之间
 		{
 			lastTraceUV = Vec2f(-1, -1);
 			lastTracePixelInterval = 0;
@@ -201,21 +205,20 @@ namespace dso
 		}
 
 		// ============== compute error-bounds on result in pixel. if the new interval is not at least 1/2 of the old, SKIP ===================
+		//[ ***step 2*** ] 计算误差大小(图像梯度和极线夹角大小), 夹角大, 小的几何误差会有很大影响
 		float dx = setting_trace_stepsize * (uMax - uMin);
 		float dy = setting_trace_stepsize * (vMax - vMin);
 
+		//! (dIx*dx + dIy*dy)^2
 		float a = (Vec2f(dx, dy).transpose() * gradH * Vec2f(dx, dy));
+		//! (dIx*dy - dIy*dx)^2
 		float b = (Vec2f(dy, -dx).transpose() * gradH * Vec2f(dy, -dx));
+		// 计算的是极线方向和梯度方向的夹角大小，90度则a=0, errorInPixel变大；平行时候b=0
 		float errorInPixel = 0.2f + 0.2f * (a + b) / a;
 
+		//* errorInPixel大说明垂直, 这时误差会很大, 视为bad
 		if (errorInPixel * setting_trace_minImprovementFactor > dist && std::isfinite(idepth_max_stereo))
 		{
-			//			lastTraceUV_Stereo = Vec2f(uMax+uMin, vMax+vMin)*0.5;
-			//			lastTracePixelInterval_Stereo=dist;
-			//			idepth_stereo = (u_stereo - 0.5*(uMax+uMin))/bf;
-			//			return lastTraceStatus_Stereo = ImmaturePointStatus::IPS_BADCONDITION;
-			//            lastTraceUV = Vec2f(u, v);
-			//            lastTracePixelInterval = dist;
 			return lastTraceStatus = ImmaturePointStatus ::IPS_BADCONDITION;
 		}
 
@@ -223,8 +226,9 @@ namespace dso
 			errorInPixel = 10;
 
 		// ============== do the discrete search ===================
-		dx /= dist;
-		dy /= dist;
+		//[ ***step 3*** ] 在极线上找到最小的光度误差的位置, 并计算和第二次的比值作为质量
+		dx /= dist;	// cos
+		dy /= dist;	// sin
 
 		if (dist > maxPixSearch)
 		{
@@ -233,13 +237,14 @@ namespace dso
 			dist = maxPixSearch;
 		}
 
-		int numSteps = 1.9999f + dist / setting_trace_stepsize;
+		int numSteps = 1.9999f + dist / setting_trace_stepsize;	// 步数
 		Mat22f Rplane = KRKi.topLeftCorner<2, 2>();
 
-		float randShift = uMin * 1000 - floorf(uMin * 1000);
+		float randShift = uMin * 1000 - floorf(uMin * 1000);	// 取小数点三位后的数作为随机数
 		float ptx = uMin - randShift * dx;
 		float pty = vMin - randShift * dy;
 
+		//* pattern在新的帧上的偏移量
 		Vec2f rotatetPattern[MAX_RES_PER_POINT];
 		for (int idx = 0; idx < patternNum; idx++)
 			rotatetPattern[idx] = Rplane * Vec2f(patternP[idx][0], patternP[idx][1]);
@@ -251,6 +256,7 @@ namespace dso
 			return lastTraceStatus = ImmaturePointStatus::IPS_OOB;
 		}
 
+		//* 沿着级线搜索误差最小的位置
 		float errors[100];
 		float bestU = 0, bestV = 0, bestEnergy = 1e10;
 		int bestIdx = -1;
@@ -287,11 +293,13 @@ namespace dso
 				bestIdx = i;
 			}
 
+			// 每次走1 dist对应大小
 			ptx += dx;
 			pty += dy;
 		}
 
 		// find best score outside a +-2px radius.
+		//* 在一定的半径内找最到误差第二小的, 差的足够大, 才更好(这个常用)
 		float secondBest = 1e10;
 		for (int i = 0; i < numSteps; i++)
 		{
@@ -303,6 +311,7 @@ namespace dso
 			quality = newQuality;
 
 		// ============== do GN optimization ===================
+		//[ ***step 4*** ] 在上面的最优位置进行线性搜索, 进行求精
 		float uBak = bestU, vBak = bestV, gnstepsize = 1, stepBack = 0;
 		if (setting_trace_GNIterations > 0)
 			bestEnergy = 1e5;
@@ -322,7 +331,7 @@ namespace dso
 					continue;
 				}
 				float residual = hitColor[0] - (aff[0] * color[idx] + aff[1]);
-				float dResdDist = dx * hitColor[1] + dy * hitColor[2];
+				float dResdDist = dx * hitColor[1] + dy * hitColor[2];	// 极线方向梯度
 				float hw = fabs(residual) < setting_huberTH ? 1 : setting_huberTH / fabs(residual);
 
 				H += hw * dResdDist * dResdDist;
@@ -335,7 +344,7 @@ namespace dso
 				gnStepsBad++;
 
 				// do a smaller step from old point.
-				stepBack *= 0.5;
+				stepBack *= 0.5;	//* 减小步长再进行计算
 				bestU = uBak + stepBack * dx;
 				bestV = vBak + stepBack * dy;
 			}
@@ -344,6 +353,7 @@ namespace dso
 				gnStepsGood++;
 
 				float step = -gnstepsize * b / H;
+				//* 步长最大才0.5
 				if (step < -0.5)
 					step = -0.5;
 				else if (step > 0.5)
@@ -352,7 +362,7 @@ namespace dso
 				if (!std::isfinite(step))
 					step = 0;
 
-				uBak = bestU;
+				uBak = bestU;	// 备份
 				vBak = bestV;
 				stepBack = step;
 
@@ -365,6 +375,7 @@ namespace dso
 				break;
 		}
 
+		//* 残差太大, 则设置为外点
 		if (!(bestEnergy < energyTH * setting_trace_extraSlackOnTH))
 		{
 
@@ -377,6 +388,8 @@ namespace dso
 		}
 
 		// ============== set new interval ===================
+		//[ ***step 5*** ] 根据得到的最优位置重新计算逆深度的范围
+		//* 取误差最大的
 		if (dx * dx > dy * dy)
 		{
 			idepth_min_stereo = (pr[2] * (bestU - errorInPixel * dx) - pr[0]) / (Kt[0] - Kt[2] * (bestU - errorInPixel * dx));
@@ -399,9 +412,9 @@ namespace dso
 			return lastTraceStatus = ImmaturePointStatus::IPS_OUTLIER;
 		}
 
-		lastTracePixelInterval = 2 * errorInPixel;
-		lastTraceUV = Vec2f(bestU, bestV);
-		idepth_stereo = (u_stereo - bestU) / bf;
+		lastTracePixelInterval = 2 * errorInPixel;	// 搜索的范围
+		lastTraceUV = Vec2f(bestU, bestV);			// 上一次得到的最有位置
+		idepth_stereo = (u_stereo - bestU) / bf;	// 当前点的深度信息
 		return lastTraceStatus = ImmaturePointStatus::IPS_GOOD;
 	}
 

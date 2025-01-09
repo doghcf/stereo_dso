@@ -72,8 +72,8 @@ public:
 	int neighbours[10];
 	float neighboursDist[10];
 
-	float my_type;
-	float outlierTH;
+	float my_type;		//!< 第0层提取是1, 2, 4, 对应d, 2d, 4d, 其它层是1
+	float outlierTH;	//!< 外点阈值
 };
 
 class CoarseInitializer {
