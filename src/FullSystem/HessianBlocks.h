@@ -106,7 +106,7 @@ namespace dso
 		FrameShell *shell;
 
 		Eigen::Vector3f *dI;			   // trace, fine tracking. Used for direction select (not for gradient histograms etc.)
-		Eigen::Vector3f *dIp[PYR_LEVELS];  // coarse tracking / coarse initializer. NAN in [0] only.
+		Eigen::Vector3f *dIp[PYR_LEVELS];  // coarse tracking / coarse initializer. NAN in [0] only. 辐射值、x 方向梯度、y 方向梯度
 		float *absSquaredGrad[PYR_LEVELS]; // only used for pixel select (histograms etc.). no NAN.
 
 		int frameID; // incremental ID for keyframes only!
@@ -374,31 +374,31 @@ namespace dso
 	{
 		EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 		static int instanceCounter;
-		EFPoint *efPoint;
+		EFPoint *efPoint;	//!< 点的能量函数
 
 		// static values
 		float color[MAX_RES_PER_POINT];	  // colors in host frame
 		float weights[MAX_RES_PER_POINT]; // host-weights for respective residuals.
 
-		float u, v;
+		float u, v;			//!< 像素点的位置
 		int idx;
-		float energyTH;
-		FrameHessian *host;
-		bool hasDepthPrior;
+		float energyTH;		//!< 光度误差阈值
+		FrameHessian *host;	//!< 主帧
+		bool hasDepthPrior;	//!< 初始化得到的点是有深度先验的, 其它没有
 
-		float my_type;
+		float my_type;		// 不同类型点, 显示用
 
 		float idepth_scaled;
-		float idepth_zero_scaled;
-		float idepth_zero;
+		float idepth_zero_scaled;	//!< FEJ使用, 点在host上x=0初始逆深度
+		float idepth_zero;			//!< 缩放了scale倍的固定线性化点逆深度
 		float idepth;
-		float step;
-		float step_backup;
-		float idepth_backup;
+		float step;					//!< 迭代优化每一步增量
+		float step_backup;			//!< 迭代优化上一步增量的备份
+		float idepth_backup;		//!< 上一次的逆深度值
 
 		float nullspaces_scale;
-		float idepth_hessian;
-		float maxRelBaseline;
+		float idepth_hessian;		//!< 对应的hessian矩阵值
+		float maxRelBaseline;		//!< 衡量该点的最大基线长度
 		int numGoodResiduals;
 
 		enum PtStatus

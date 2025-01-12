@@ -32,7 +32,7 @@ namespace dso
 	PointHessian::PointHessian(const ImmaturePoint *const rawPoint, CalibHessian *Hcalib)
 	{
 		instanceCounter++;
-		host = rawPoint->host;
+		host = rawPoint->host;	// 主帧
 		hasDepthPrior = false;
 
 		idepth_hessian = 0;
@@ -43,7 +43,6 @@ namespace dso
 		u = rawPoint->u;
 		v = rawPoint->v;
 		assert(std::isfinite(rawPoint->idepth_max));
-		// idepth_init = rawPoint->idepth_GT;
 
 		my_type = rawPoint->my_type;
 

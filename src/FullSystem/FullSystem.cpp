@@ -285,6 +285,7 @@ namespace dso
 
 		AffLight aff_last_2_l = AffLight(0, 0);
 
+		// 候选位姿，作为相对位姿的初值
 		std::vector<SE3, Eigen::aligned_allocator<SE3>> lastF_2_fh_tries;
 
 		// for first two frames process differently
@@ -1424,14 +1425,14 @@ namespace dso
 			numID++;
 		}
 
-		// randomly sub-select the points I need.
+		// randomly sub-select the points I need. 随机选择需要的点
 		float keepPercentage = setting_desiredPointDensity / coarseInitializer->numPoints[0];
 
 		if (!setting_debugout_runquiet)
 			printf("Initialization: keep %.1f%% (need %d, have %d)!\n", 100 * keepPercentage,
 				   (int)(setting_desiredPointDensity), coarseInitializer->numPoints[0]);
 
-		// initialize first frame by idepth computed by static stereo matching
+		// initialize first frame by idepth computed by static stereo matching 通过静态立体匹配计算的深度初始化第一帧
 		for (int i = 0; i < coarseInitializer->numPoints[0]; i++)
 		{
 			if (rand() / (float)RAND_MAX > keepPercentage)
