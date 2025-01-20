@@ -214,7 +214,7 @@ namespace dso
 		//! (dIx*dy - dIy*dx)^2
 		float b = (Vec2f(dy, -dx).transpose() * gradH * Vec2f(dy, -dx));
 		// 计算的是极线方向和梯度方向的夹角大小，90度则a=0, errorInPixel变大；平行时候b=0
-		float errorInPixel = 0.2f + 0.2f * (a + b) / a;
+		float errorInPixel = 0.2f + 0.2f * (a + b) / a;	// 置信系数
 
 		//* errorInPixel大说明垂直, 这时误差会很大, 视为bad
 		if (errorInPixel * setting_trace_minImprovementFactor > dist && std::isfinite(idepth_max_stereo))
@@ -390,12 +390,12 @@ namespace dso
 		// ============== set new interval ===================
 		//[ ***step 5*** ] 根据得到的最优位置重新计算逆深度的范围
 		//* 取误差最大的
-		if (dx * dx > dy * dy)
+		if (dx * dx > dy * dy)	// 当ｘ方向梯度较大时，根据公式（1）来确定逆深度范围 (https://bxh1.github.io/2020/11/20/DSO%E4%BB%A3%E7%A0%81%E8%A7%A3%E6%9E%90-%E8%B7%9F%E8%B8%AA/) 3.1.2 
 		{
 			idepth_min_stereo = (pr[2] * (bestU - errorInPixel * dx) - pr[0]) / (Kt[0] - Kt[2] * (bestU - errorInPixel * dx));
 			idepth_max_stereo = (pr[2] * (bestU + errorInPixel * dx) - pr[0]) / (Kt[0] - Kt[2] * (bestU + errorInPixel * dx));
 		}
-		else
+		else	// 当ｙ方向梯度较大时，根据公式（2）来确定逆深度范围
 		{
 			idepth_min_stereo = (pr[2] * (bestV - errorInPixel * dy) - pr[1]) / (Kt[1] - Kt[2] * (bestV - errorInPixel * dy));
 			idepth_max_stereo = (pr[2] * (bestV + errorInPixel * dy) - pr[1]) / (Kt[1] - Kt[2] * (bestV + errorInPixel * dy));
@@ -439,17 +439,12 @@ namespace dso
 				   idepth_min, idepth_max,
 				   hostToFrame_Kt[0], hostToFrame_Kt[1], hostToFrame_Kt[2]);
 
-		//	const float stepsize = 1.0;				// stepsize for initial discrete search.
-		//	const int GNIterations = 3;				// max # GN iterations
-		//	const float GNThreshold = 0.1;				// GN stop after this stepsize.
-		//	const float extraSlackOnTH = 1.2;			// for energy-based outlier check, be slightly more relaxed by this factor.
-		//	const float slackInterval = 0.8;			// if pixel-interval is smaller than this, leave it be.
-		//	const float minImprovementFactor = 2;		// if pixel-interval is smaller than this, leave it be.
-
+		// 极线搜索
 		// ============== project min and max. return if one of them is OOB ===================
+		// 将未成熟的点根据相对位姿和之前的逆深度投影到当前帧上
 		Vec3f pr = hostToFrame_KRKi * Vec3f(u, v, 1);
 		Vec3f ptpMin = pr + hostToFrame_Kt * idepth_min;
-
+		// 逆深度最小时投影得到的像素坐标
 		float uMin = ptpMin[0] / ptpMin[2];
 		float vMin = ptpMin[1] / ptpMin[2];
 
@@ -472,6 +467,7 @@ namespace dso
 		Vec3f ptpMax;
 		if (std::isfinite(idepth_max))
 		{
+			// 确定极线
 			ptpMax = pr + hostToFrame_Kt * idepth_max;
 			uMax = ptpMax[0] / ptpMax[2];
 			vMax = ptpMax[1] / ptpMax[2];
@@ -504,16 +500,17 @@ namespace dso
 			dist = maxPixSearch;
 
 			// project to arbitrary depth to get direction.
+			// 如果逆深度无限大,随便设一个逆深度0.01
 			ptpMax = pr + hostToFrame_Kt * 0.01;
 			uMax = ptpMax[0] / ptpMax[2];
 			vMax = ptpMax[1] / ptpMax[2];
 
-			// direction.
+			// direction. 极线方向
 			float dx = uMax - uMin;
 			float dy = vMax - vMin;
-			float d = 1.0f / sqrtf(dx * dx + dy * dy);
+			float d = 1.0f / sqrtf(dx * dx + dy * dy);		// L := l_0 + \lambda [l_x, l_y]^\top, l_0 = [u_min, v_min]^\top, \lambda是离散的步长
 
-			// set to [setting_maxPixSearch].
+			// set to [setting_maxPixSearch]. 像素的最大范围
 			uMax = uMin + dist * dx * d;
 			vMax = vMin + dist * dy * d;
 
@@ -543,8 +540,8 @@ namespace dso
 		float dx = setting_trace_stepsize * (uMax - uMin);
 		float dy = setting_trace_stepsize * (vMax - vMin);
 
-		float a = (Vec2f(dx, dy).transpose() * gradH * Vec2f(dx, dy));
-		float b = (Vec2f(dy, -dx).transpose() * gradH * Vec2f(dy, -dx));
+		float a = (Vec2f(dx, dy).transpose() * gradH * Vec2f(dx, dy));		// dxdy方向
+		float b = (Vec2f(dy, -dx).transpose() * gradH * Vec2f(dy, -dx));	// 垂直dxdy方向
 		float errorInPixel = 0.2f + 0.2f * (a + b) / a;
 
 		if (errorInPixel * setting_trace_minImprovementFactor > dist && std::isfinite(idepth_max))
@@ -604,6 +601,7 @@ namespace dso
 		if (numSteps >= 100)
 			numSteps = 99;
 
+		// 在最大范围内按一定步长进行离散搜索，找到最小的误差
 		for (int i = 0; i < numSteps; i++)
 		{
 			float energy = 0;
@@ -641,7 +639,7 @@ namespace dso
 			pty += dy;
 		}
 
-		// find best score outside a +-2px radius.
+		// find best score outside a +-2px radius. 第二小的误差
 		float secondBest = 1e10;
 		for (int i = 0; i < numSteps; i++)
 		{
@@ -724,14 +722,7 @@ namespace dso
 				break;
 		}
 
-		// ============== detect energy-based outlier. ===================
-		//	float absGrad0 = getInterpolatedElement(frame->absSquaredGrad[0],bestU, bestV, wG[0]);
-		//	float absGrad1 = getInterpolatedElement(frame->absSquaredGrad[1],bestU*0.5-0.25, bestV*0.5-0.25, wG[1]);
-		//	float absGrad2 = getInterpolatedElement(frame->absSquaredGrad[2],bestU*0.25-0.375, bestV*0.25-0.375, wG[2]);
 		if (!(bestEnergy < energyTH * setting_trace_extraSlackOnTH))
-		//			|| (absGrad0*areaGradientSlackFactor < host->frameGradTH
-		//		     && absGrad1*areaGradientSlackFactor < host->frameGradTH*0.75f
-		//			 && absGrad2*areaGradientSlackFactor < host->frameGradTH*0.50f))
 		{
 			if (debugPrint)
 				printf("OUTLIER!\n");

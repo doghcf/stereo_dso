@@ -593,7 +593,7 @@ namespace dso
 		return;
 	}
 
-	// process nonkey frame to refine key frame idepth
+	// process nonkey frame to refine key frame idepth 处理非关键帧以细化关键帧的逆深度
 	void FullSystem::traceNewCoarseNonKey(FrameHessian *fh, FrameHessian *fh_right)
 	{
 		boost::unique_lock<boost::mutex> lock(mapMutex);
