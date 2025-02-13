@@ -182,7 +182,7 @@ namespace dso
 		void flagPointsForRemoval();
 		void makeNewTraces(FrameHessian *newFrame, FrameHessian *newFrameRight, float *gtDepth);
 		void initializeFromInitializer(FrameHessian *newFrame);
-		void initializeFromInitializer(FrameHessian *newFrame, FrameHessian *newFrame_right);
+		void initFirstFrameIMU(FrameHessian *fh);
 		void flagFramesForMarginalization(FrameHessian *newFH);
 
 		void removeOutliers();

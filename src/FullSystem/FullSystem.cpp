@@ -289,9 +289,10 @@ namespace dso
 		std::vector<SE3, Eigen::aligned_allocator<SE3>> lastF_2_fh_tries;
 
 		// for first two frames process differently
-		if (allFrameHistory.size() == 2)
+		if (allFrameHistory.size() == 2 || !first_track_flag)
 		{
 			initializeFromInitializer(fh);
+			first_track_flag = true;
 
 			lastF_2_fh_tries.push_back(SE3(Eigen::Matrix<double, 3, 3>::Identity(), Eigen::Matrix<double, 3, 1>::Zero()));
 
@@ -528,12 +529,6 @@ namespace dso
 		fh_right->ab_exposure = image_right->exposure_time;
 		fh_right->makeImages(image_right->image, &Hcalib);
 
-		Mat33f K = Mat33f::Identity();
-		K(0, 0) = Hcalib.fxl();
-		K(1, 1) = Hcalib.fyl();
-		K(0, 2) = Hcalib.cxl();
-		K(1, 2) = Hcalib.cyl();
-
 		int counter = 0;
 
 		makeNewTraces(fh, fh_right, 0);
@@ -547,7 +542,7 @@ namespace dso
 			ph->idepth_min_stereo = ph->idepth_min = 0;
 			ph->idepth_max_stereo = ph->idepth_max = NAN;
 
-			ImmaturePointStatus phTraceRightStatus = ph->traceStereo(fh_right, K, 1);
+			ImmaturePointStatus phTraceRightStatus = ph->traceStereo(fh_right, &Hcalib, 1);
 
 			if (phTraceRightStatus == ImmaturePointStatus::IPS_GOOD)
 			{
@@ -557,7 +552,7 @@ namespace dso
 				phRight->v_stereo = phRight->v;
 				phRight->idepth_min_stereo = ph->idepth_min = 0;
 				phRight->idepth_max_stereo = ph->idepth_max = NAN;
-				ImmaturePointStatus phTraceLeftStatus = phRight->traceStereo(fh, K, 0);
+				ImmaturePointStatus phTraceLeftStatus = phRight->traceStereo(fh, &Hcalib, 0);
 
 				float u_stereo_delta = abs(ph->u_stereo - phRight->lastTraceUV(0));
 				float depth = 1.0f / ph->idepth_stereo;
@@ -652,7 +647,7 @@ namespace dso
 					phNonKey->idepth_max_stereo = phNonKey->idepth_max;
 
 					// do static stereo match from left image to right
-					ImmaturePointStatus phNonKeyStereoStatus = phNonKey->traceStereo(fh_right, K, 1);
+					ImmaturePointStatus phNonKeyStereoStatus = phNonKey->traceStereo(fh_right, &Hcalib, 1);
 
 					if (phNonKeyStereoStatus == ImmaturePointStatus::IPS_GOOD)
 					{
@@ -664,7 +659,7 @@ namespace dso
 						phNonKeyRight->idepth_max_stereo = phNonKey->idepth_max;
 
 						// do static stereo match from right image to left
-						ImmaturePointStatus phNonKeyRightStereoStatus = phNonKeyRight->traceStereo(fh, K, 0);
+						ImmaturePointStatus phNonKeyRightStereoStatus = phNonKeyRight->traceStereo(fh, &Hcalib, 0);
 
 						// change of u after two different stereo match
 						float u_stereo_delta = abs(phNonKey->u_stereo - phNonKeyRight->lastTraceUV(0));
@@ -1062,6 +1057,8 @@ namespace dso
 			if (coarseInitializer->frameID < 0) // first frame set. fh is kept by coarseInitializer.
 			{
 				coarseInitializer->setFirstStereo(&Hcalib, fh, fh_right);
+
+				initFirstFrameIMU(fh); 
 				initialized = true;
 				M_num = 0;
 				M_num2 = 0;
@@ -1392,12 +1389,6 @@ namespace dso
 	{
 		boost::unique_lock<boost::mutex> lock(mapMutex);
 
-		Mat33f K = Mat33f::Identity();
-		K(0, 0) = Hcalib.fxl();
-		K(1, 1) = Hcalib.fyl();
-		K(0, 2) = Hcalib.cxl();
-		K(1, 2) = Hcalib.cyl();
-
 		// [ ***step 1*** ] 把第一帧设置成关键帧, 加入队列, 加入EnergyFunctional
 		FrameHessian *firstFrame = coarseInitializer->firstFrame;	// 获取初始化器中的第一帧
 		firstFrame->idx = frameHessians.size();						// 赋值给它id (0开始)
@@ -1446,7 +1437,7 @@ namespace dso
 			pt->idepth_min_stereo = 0;
 			pt->idepth_max_stereo = NAN;
 
-			pt->traceStereo(firstFrameRight, K, 1);
+			pt->traceStereo(firstFrameRight, &Hcalib, 1);
 
 			pt->idepth_min = pt->idepth_min_stereo;
 			pt->idepth_max = pt->idepth_max_stereo;
@@ -1495,6 +1486,11 @@ namespace dso
 
 		initialized = true;
 		printf("INITIALIZE FROM INITIALIZER (%d pts)!\n", (int)firstFrame->pointHessians.size());
+	}
+
+	void FullSystem::initFirstFrameIMU(FrameHessian *fh)
+	{
+		int index;
 	}
 
 	void FullSystem::makeNewTraces(FrameHessian *newFrame, FrameHessian *newFrameRight, float *gtDepth)

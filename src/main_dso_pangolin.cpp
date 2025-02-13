@@ -56,6 +56,10 @@ std::string calib = "";
 std::string source1 = "";
 std::string calib1 = "";
 std::string result = "";
+std::string imuInfo = "";
+std::string imuPath = "";
+std::string picTimestamp = "";
+std::string picTimestamp1 = "";
 double rescale = 1;
 bool reverse = false;
 bool disableROS = false;
@@ -289,6 +293,34 @@ void parseArgument(char *arg)
 		return;
 	}
 
+	if (1 == sscanf(arg, "imu_info=%s", buf))
+	{
+		imuInfo = buf;
+		printf("loading imu_info from %s!\n", imuInfo.c_str());
+		return;
+	}
+
+	if (1 == sscanf(arg, "imu_data=%s", buf))
+	{
+		imuPath = buf;
+		printf("loading groundtruth from %s!\n", imuPath.c_str());
+		return;
+	}
+
+	if (1 == sscanf(arg, "pic_timestamp=%s", buf))
+	{
+		picTimestamp = buf;
+		printf("loading pic_timestamp from %s!\n", picTimestamp.c_str());
+		return;
+	}
+
+	if (1 == sscanf(arg, "pic_timestamp1=%s", buf))
+	{
+		picTimestamp1 = buf;
+		printf("loading pic_timestamp1 from %s!\n", picTimestamp1.c_str());
+		return;
+	}
+
 	if (1 == sscanf(arg, "result=%s", buf))
 	{
 		result = buf;
@@ -370,12 +402,123 @@ void parseArgument(char *arg)
 	printf("could not parse argument \"%s\"!!!!\n", arg);
 }
 
+void getIMUInfo()
+{
+	std::ifstream inf;
+	inf.open(imuInfo);
+	std::string sline;
+	int line = 0;
+	Mat33 R;
+	Vec3 t;
+	Vec4 noise;
+	while (line < 3 && std::getline(inf, sline))
+	{
+		std::istringstream ss(sline);
+		for (int i = 0; i < 3; ++i)
+		{
+			ss >> R(line, i);
+		}
+		ss >> t(line);
+		++line;
+	}
+	std::getline(inf, sline);
+	++line;
+	while (line < 8 && std::getline(inf, sline))
+	{
+		std::istringstream ss(sline);
+		ss >> noise(line - 4);
+		++line;
+	}
+	SE3 temp(R, t);
+	T_BC = temp;
+
+	GyrCov = Mat33::Identity() * noise(0) * noise(0) / 0.005;
+	AccCov = Mat33::Identity() * noise(1) * noise(1) / 0.005;
+	GyrRandomWalkNoise = Mat33::Identity() * noise(2) * noise(2);
+	AccRandomWalkNoise = Mat33::Identity() * noise(3) * noise(3);
+
+	LOG(INFO) << "T_BC: \n"
+			  << T_BC.matrix();
+	LOG(INFO) << "noise: " << noise.transpose();
+	inf.close();
+}
+
+void getIMUDataEuroc()
+{
+	std::ifstream inf;
+	inf.open(imuPath);
+	std::string sline;
+	std::getline(inf, sline);
+	while (std::getline(inf, sline))
+	{
+		std::istringstream ss(sline);
+		Vec3 gyro, acc;
+		double time;
+		ss >> time;
+		time = time / 1e9;
+		char temp;
+		for (int i = 0; i < 3; ++i)
+		{
+			ss >> temp;
+			ss >> gyro(i);
+		}
+		for (int i = 0; i < 3; ++i)
+		{
+			ss >> temp;
+			ss >> acc(i);
+		}
+		m_gry.push_back(gyro);
+		m_acc.push_back(acc);
+		imu_time_stamps.push_back(time);
+	}
+	inf.close();
+}
+
+void getPicTimestamp()
+{
+	std::ifstream inf;
+	inf.open(picTimestamp);
+	std::string sline;
+	std::getline(inf, sline);
+	while (std::getline(inf, sline))
+	{
+		std::istringstream ss(sline);
+		double time;
+		ss >> time;
+		time = time / 1e9;
+		pic_time_stamp.push_back(time);
+	}
+	inf.close();
+	if (picTimestamp1.size() > 0)
+	{
+		std::ifstream inf;
+		inf.open(picTimestamp1);
+		std::string sline;
+		std::getline(inf, sline);
+		while (std::getline(inf, sline))
+		{
+			std::istringstream ss(sline);
+			double time;
+			ss >> time;
+			time = time / 1e9;
+			pic_time_stamp_r.push_back(time);
+		}
+		inf.close();
+	}
+}
+
 int main(int argc, char **argv)
 {
-	// setlocale(LC_ALL, "");
-
 	for (int i = 1; i < argc; i++)
 		parseArgument(argv[i]);
+
+	if (imuInfo.size() > 0)
+	{
+		getIMUInfo();
+	}
+
+	getIMUDataEuroc();
+	getPicTimestamp();
 
 	// hook crtl+C.
 	boost::thread exThread = boost::thread(exitThread);
@@ -383,7 +526,9 @@ int main(int argc, char **argv)
 	ImageFolderReader *reader = new ImageFolderReader(source, calib, gammaCalib, vignette);
 	ImageFolderReader *reader_right = new ImageFolderReader(source1, calib1, gammaCalib, vignette);
 	reader->setGlobalCalibration();
-	reader_right->setGlobalCalibration();
+	int w_out, h_out;
+	reader_right->getCalibMono(K_right, w_out, h_out);
+	LOG(INFO) << "K_right: \n" << K_right;
 
 	if (setting_photometricCalibration > 0 && reader->getPhotometricGamma() == 0)
 	{
@@ -411,7 +556,7 @@ int main(int argc, char **argv)
 
 	// to make MacOS happy: run this in dedicated thread -- and use this one to run the GUI.
 	std::thread runthread([&]()
-	{
+						  {
 		std::vector<int> idsToPlay; // left images
 		std::vector<double> timesToPlayAt;
 
@@ -469,7 +614,7 @@ int main(int argc, char **argv)
 		clock_t started = clock();
 		double sInitializerOffset = 0;
 
-		for (int ii = 0; ii < (int)idsToPlay.size() - 1; ii++)
+		for (int ii = 0; ii < (int)idsToPlay.size(); ii++)
 		{
 			if (!fullSystem->initialized) // if not initialized: reset start time.
 			{
@@ -479,6 +624,25 @@ int main(int argc, char **argv)
 			}
 
 			int i = idsToPlay[ii];
+			
+			double time_l = pic_time_stamp[i];
+			int index = -1;
+
+			if (pic_time_stamp_r.size() > 0)
+			{
+				for (int i = 0; i < pic_time_stamp_r.size(); ++i)
+				{
+					if (pic_time_stamp_r[i] >= time_l || fabs(pic_time_stamp_r[i] - time_l) < 0.01)
+					{
+						index = i;
+						break;
+					}
+				}
+			}
+			if (fabs(pic_time_stamp_r[index] - time_l) > 0.01)
+			{
+				continue;
+			}
 
 			ImageAndExposure *img_left;
 			ImageAndExposure *img_right;
@@ -556,6 +720,8 @@ int main(int argc, char **argv)
 					fullSystem->outputWrapper = wraps;
 
 					setting_fullResetRequested = false;
+
+					first_track_flag = false;
 				}
 			}
 
@@ -598,8 +764,7 @@ int main(int argc, char **argv)
 				<< ((tv_end.tv_sec - tv_start.tv_sec) * 1000.0f + (tv_end.tv_usec - tv_start.tv_usec) / 1000.0f) / (float)reader->getNumImages() << "\n";
 			tmlog.flush();
 			tmlog.close();
-		} 
-	});
+		} });
 
 	if (viewer != 0)
 		viewer->run();

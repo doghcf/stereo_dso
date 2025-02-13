@@ -96,8 +96,14 @@ namespace dso
 	}
 
 	// do static stereo match. if mode_right = true, it matches from left to right. otherwise do it from right to left.
-	ImmaturePointStatus ImmaturePoint::traceStereo(FrameHessian *frame, Mat33f K, bool mode_right)
+	ImmaturePointStatus ImmaturePoint::traceStereo(FrameHessian *frame, CalibHessian *HCalib, bool mode_right)
 	{
+		Mat33f K = Mat33f::Identity();
+		K(0, 0) = HCalib->fxl();
+		K(1, 1) = HCalib->fyl();
+		K(0, 2) = HCalib->cxl();
+		K(1, 2) = HCalib->cyl();
+		
 		// KRKi
 		Mat33f KRKi = Mat33f::Identity().cast<float>();
 		// Kt 基线向量在像素坐标系中的投影

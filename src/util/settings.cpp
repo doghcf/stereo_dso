@@ -161,6 +161,22 @@ namespace dso
 	int M_num2 = 0;
 	double run_time = 0;
 	std::vector<double> pic_time_stamp;
+	std::vector<double> pic_time_stamp_r;
+	Mat33f K_right;
+
+	// IMU Info
+	SE3 T_BC;
+	Mat33 GyrCov;
+	Mat33 AccCov;
+	Mat33 GyrRandomWalkNoise;
+	Mat33 AccRandomWalkNoise;
+	
+	// IMU Data
+	std::vector<Vec3> m_gry;
+	std::vector<Vec3> m_acc;
+	std::vector<double> imu_time_stamps;
+
+	bool first_track_flag = false
 
 	void handleKey(char k)
 	{

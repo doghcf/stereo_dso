@@ -743,12 +743,6 @@ namespace dso
 		float *statusMap = new float[w[0] * h[0]];
 		bool *statusMapB = new bool[w[0] * h[0]];
 
-		Mat33f K = Mat33f::Identity();
-		K(0, 0) = HCalib->fxl();
-		K(1, 1) = HCalib->fyl();
-		K(0, 2) = HCalib->cxl();
-		K(1, 2) = HCalib->cyl();
-
 		float densities[] = {0.03, 0.05, 0.15, 0.5, 1};
 		memset(idepth[0], 0, sizeof(float) * w[0] * h[0]);
 
@@ -785,7 +779,7 @@ namespace dso
 						pt->v_stereo = pt->v;
 						pt->idepth_min_stereo = 0;
 						pt->idepth_max_stereo = NAN;
-						ImmaturePointStatus stat = pt->traceStereo(firstRightFrame, K, 1);
+						ImmaturePointStatus stat = pt->traceStereo(firstRightFrame, HCalib, 1);
 
 						if (stat == ImmaturePointStatus::IPS_GOOD)
 						{

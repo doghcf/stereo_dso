@@ -171,8 +171,6 @@ public:
 		Eigen::Matrix3f K;
 		getCalibMono(K, w_out, h_out);
 		setGlobalCalib(w_out, h_out, K);
-
-		setBaseline();
 	}
 
 	void setBaseline()

@@ -175,6 +175,20 @@ namespace dso
     extern int M_num2;
     extern double run_time;
     extern std::vector<double> pic_time_stamp;
+    extern std::vector<double> pic_time_stamp_r;
+    extern Mat33f K_right;
+
+    extern SE3 T_BC;
+    extern Mat33 GyrCov;
+    extern Mat33 AccCov;
+    extern Mat33 GyrRandomWalkNoise;
+    extern Mat33 AccRandomWalkNoise;
+
+    extern std::vector<Vec3> m_gry;
+    extern std::vector<Vec3> m_acc;
+    extern std::vector<double> imu_time_stamps;
+
+    extern bool first_track_flag;
 
 // #define patternNum staticPatternNum[setting_pattern]
 // #define patternP staticPattern[setting_pattern]

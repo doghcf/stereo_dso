@@ -1,18 +1,16 @@
-SET(PROJECT_NAME SDSO)
+SET(PROJECT_NAME DSO)
 
 PROJECT(${PROJECT_NAME})
 CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 #set(CMAKE_VERBOSE_MAKEFILE ON)
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-#set(BUILD_TYPE Release)
-set(BUILD_TYPE RelWithDebInfo)
+
+set(BUILD_TYPE Release)
+#set(BUILD_TYPE RelWithDebInfo)
 
 set(EXECUTABLE_OUTPUT_PATH bin)
 set(LIBRARY_OUTPUT_PATH lib)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-set(Eigen3_ROOT "/usr/include/eigen3")
 
 # required libraries
 find_package(SuiteParse REQUIRED)
@@ -24,14 +22,25 @@ find_package(LibZip QUIET)
 find_package(Pangolin 0.2 QUIET)
 find_package(OpenCV QUIET)
 
-
+set(Glog_DIR "/usr/local/lib/cmake/glog")  # 修正路径
+find_package(Glog REQUIRED)
+include_directories(${Glog_INCLUDE_DIRS})
+if (GLOG_FOUND)
+	message("--- found Glog!!!")
+else()
+	message("--- could not find Glog, please install it.")
+endif()
 
 # flags
 add_definitions("-DENABLE_SSE")
 set(CMAKE_CXX_FLAGS
-   "${SSE_FLAGS} -O3 -fPIC -g -std=c++0x -march=native"
+   "${SSE_FLAGS} -O3 -g -std=c++0x -march=native"
 #   "${SSE_FLAGS} -O3 -g -std=c++0x -fno-omit-frame-pointer"
 )
+
+if (MSVC)
+     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
+endif (MSVC)
 
 # Sources files
 set(dso_SOURCE_FILES
@@ -46,6 +55,7 @@ set(dso_SOURCE_FILES
   ${PROJECT_SOURCE_DIR}/src/FullSystem/ImmaturePoint.cpp
   ${PROJECT_SOURCE_DIR}/src/FullSystem/HessianBlocks.cpp
   ${PROJECT_SOURCE_DIR}/src/FullSystem/PixelSelector2.cpp
+#   ${PROJECT_SOURCE_DIR}/src/FullSystem/IMUPreintegrator.cpp
   ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/EnergyFunctional.cpp
   ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/AccumulatedTopHessian.cpp
   ${PROJECT_SOURCE_DIR}/src/OptimizationBackend/AccumulatedSCHessian.cpp
@@ -60,6 +70,7 @@ set(dso_SOURCE_FILES
 include_directories(
   ${PROJECT_SOURCE_DIR}/src
   ${PROJECT_SOURCE_DIR}/thirdparty/Sophus
+  ${PROJECT_SOURCE_DIR}/thirdparty/sse2neon
   ${EIGEN3_INCLUDE_DIR}
 ) 
 
@@ -114,13 +125,17 @@ add_library(dso ${dso_SOURCE_FILES} ${dso_opencv_SOURCE_FILES} ${dso_pangolin_SO
 #set_property( TARGET dso APPEND_STRING PROPERTY COMPILE_FLAGS -Wall )
 
 
+if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin") # OSX
+    set(BOOST_THREAD_LIBRARY boost_thread-mt)
+else()
+    set(BOOST_THREAD_LIBRARY boost_thread)
+endif()
+
 # build main executable (only if we have both OpenCV and Pangolin)
 if (OpenCV_FOUND AND Pangolin_FOUND)
 	message("--- compiling dso_dataset.")
 	add_executable(dso_dataset ${PROJECT_SOURCE_DIR}/src/main_dso_pangolin.cpp )
-    target_link_libraries(dso_dataset dso boost_system boost_thread cxsparse ${LIBZIP_LIBRARY} ${Pangolin_LIBRARIES} ${OpenCV_LIBS})
-	TARGET_LINK_LIBRARIES(dso_dataset libpangolin.so libGL.so.1 libGLEW.so)
-
+    target_link_libraries(dso_dataset dso boost_system cxsparse ${BOOST_THREAD_LIBRARY} ${LIBZIP_LIBRARY} ${Pangolin_LIBRARIES} ${OpenCV_LIBS} ${GLOG_LIBRARY})
 else()
 	message("--- not building dso_dataset, since either don't have openCV or Pangolin.")
 endif()

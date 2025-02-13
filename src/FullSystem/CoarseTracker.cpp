@@ -329,11 +329,6 @@ namespace dso
 		memset(weightSums[0], 0, sizeof(float) * w[0] * h[0]);
 
 		FrameHessian *fh_target = frameHessians.back();
-		Mat33f K1 = Mat33f::Identity();
-		K1(0, 0) = Hcalib.fxl();
-		K1(1, 1) = Hcalib.fyl();
-		K1(0, 2) = Hcalib.cxl();
-		K1(1, 2) = Hcalib.cyl();
 
 		for (FrameHessian *fh : frameHessians)
 		{
@@ -355,7 +350,7 @@ namespace dso
 					pt_track->idepth_min_stereo = r->centerProjectedTo[2] * 0.1f;
 					pt_track->idepth_max_stereo = r->centerProjectedTo[2] * 1.9f;
 
-					ImmaturePointStatus pt_track_right = pt_track->traceStereo(fh_right, K1, 1);
+					ImmaturePointStatus pt_track_right = pt_track->traceStereo(fh_right, &Hcalib, 1);
 
 					float new_idepth = 0;
 
@@ -368,7 +363,7 @@ namespace dso
 						pt_track_back->idepth_min_stereo = r->centerProjectedTo[2] * 0.1f;
 						pt_track_back->idepth_max_stereo = r->centerProjectedTo[2] * 1.9f;
 
-						ImmaturePointStatus pt_track_left = pt_track_back->traceStereo(fh_target, K1, 0);
+						ImmaturePointStatus pt_track_left = pt_track_back->traceStereo(fh_target, &Hcalib, 0);
 
 						float depth = 1.0f / pt_track->idepth_stereo;
 						float u_delta = abs(pt_track->u - pt_track_back->lastTraceUV(0));
