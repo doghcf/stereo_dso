@@ -352,8 +352,6 @@ void parseArgument(char* arg)
 
 int main( int argc, char** argv )
 {
-	//setlocale(LC_ALL, "");
-
 	for(int i=1; i<argc;i++)
 		parseArgument(argv[i]);
 	
@@ -556,7 +554,7 @@ int main( int argc, char** argv )
         gettimeofday(&tv_end, NULL);
 
 
-        fullSystem->printResult("/home/jiatianwu/project/sdso/result.txt");
+        fullSystem->printResult("/home/bjergsen/stereo_dso/result.txt");
 
 
         int numFramesProcessed = abs(idsToPlay[0]-idsToPlay.back());

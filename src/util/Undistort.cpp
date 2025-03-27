@@ -260,7 +260,7 @@ Undistort::~Undistort()
 
 
 //通过文件读取矫正参数
-Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::string gammaFilename, std::string vignetteFilename)
+Undistort* Undistort::cleargetUndistorterForFile(std::string configFilename, std::string gammaFilename, std::string vignetteFilename)
 {
 	printf("Reading Calibration from file %s",configFilename.c_str());
 
